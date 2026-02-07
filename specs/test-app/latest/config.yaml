@@ -1,5 +1,5 @@
 # App configuration
 app:
   name: test-app
-  description: "Auto-synced second"
-  updated_at: "2026-02-07T16:10:47Z"
+  description: Auto-synced change second
+  updated_at: 2026-02-07T16:23:12Z
