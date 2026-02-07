@@ -49,7 +49,7 @@ jobs:
 
           echo "First merge attempt failed: $OUTPUT"
 
-          if echo "$OUTPUT" | grep -qiE "merge conflict|out of date|not mergeable|is not mergeable"; then
+          if echo "$OUTPUT" | grep -qiE "merge conflict|out of date|not mergeable|is not mergeable|status check.*is expected"; then
             echo ":warning: Merge conflict detected, updating branch..."
 
             if gh pr update-branch "$PR_NUMBER" --repo "$REPO"; then
