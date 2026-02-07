@@ -34,35 +34,53 @@ jobs:
       PR_NUMBER: ${{ github.event.pull_request.number }}
       REPO: ${{ github.repository }}
     steps:
+      - name: Show PR status
+        run: |
+          echo "=== PR #$PR_NUMBER Status ==="
+          gh pr view "$PR_NUMBER" --repo "$REPO" --json number,title,state,mergeable,mergeStateStatus
+          echo ""
+
       - name: Merge PR with retry on conflict
         run: |
           attempt_merge() {
+            echo "[gh pr merge] Running: gh pr merge $PR_NUMBER --merge --repo $REPO --admin"
             gh pr merge "$PR_NUMBER" --merge --repo "$REPO" --admin 2>&1
           }
 
-          echo "Attempting to merge PR #$PR_NUMBER..."
+          echo "=== Attempting to merge PR #$PR_NUMBER ==="
 
           if OUTPUT=$(attempt_merge); then
+            echo "[gh pr merge] Output: $OUTPUT"
             echo ":white_check_mark: PR merged successfully"
             exit 0
           fi
 
-          echo "First merge attempt failed: $OUTPUT"
+          echo "[gh pr merge] Output: $OUTPUT"
+          echo "First merge attempt failed"
 
           if echo "$OUTPUT" | grep -qiE "merge conflict|out of date|not mergeable|is not mergeable"; then
-            echo ":warning: Merge conflict detected, updating branch..."
+            echo ":warning: Merge conflict or outdated branch detected, attempting to update branch..."
 
-            if gh pr update-branch "$PR_NUMBER" --repo "$REPO"; then
-              echo "Branch updated, waiting for GitHub to process..."
+            echo ""
+            echo "=== Updating branch ==="
+            echo "[gh pr update-branch] Running: gh pr update-branch $PR_NUMBER --repo $REPO"
+            
+            if UPDATE_OUTPUT=$(gh pr update-branch "$PR_NUMBER" --repo "$REPO" 2>&1); then
+              echo "[gh pr update-branch] Output: $UPDATE_OUTPUT"
+              echo "Branch updated successfully, waiting for GitHub to process..."
               sleep 5
 
-              echo "Retrying merge..."
+              echo ""
+              echo "=== Retrying merge ==="
               if OUTPUT=$(attempt_merge); then
+                echo "[gh pr merge] Output: $OUTPUT"
                 echo ":white_check_mark: PR merged successfully after branch update"
                 exit 0
               fi
-              echo ":x: Retry failed: $OUTPUT"
+              echo "[gh pr merge] Output: $OUTPUT"
+              echo ":x: Retry failed"
             else
+              echo "[gh pr update-branch] Output: $UPDATE_OUTPUT"
               echo ":x: Failed to update branch"
             fi
           fi
