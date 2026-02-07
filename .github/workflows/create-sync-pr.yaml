@@ -1,0 +1,88 @@
+name: Create Sync PR
+
+# This workflow simulates an external system creating PRs automatically.
+# Trigger manually via GitHub Actions UI or via repository_dispatch event.
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'App name for the sync (e.g. test-app)'
+        required: true
+        default: 'test-app'
+      change_file:
+        description: 'Which file to change'
+        required: true
+        default: 'api.yaml'
+        type: choice
+        options:
+          - api.yaml
+          - config.yaml
+      change_description:
+        description: 'Description to add to the file'
+        required: true
+        default: 'Auto-synced change'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create branch and make changes
+        run: |
+          # Generate unique branch name with timestamp
+          BRANCH_NAME="sync/${{ inputs.app_name }}-$(date +%Y%m%d-%H%M%S)"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+          git checkout -b "$BRANCH_NAME"
+
+          # Make the change based on input
+          FILE_PATH="specs/${{ inputs.app_name }}/latest/${{ inputs.change_file }}"
+          
+          if [ "${{ inputs.change_file }}" = "api.yaml" ]; then
+            cat > "$FILE_PATH" << EOF
+          openapi: 3.0.0
+          info:
+            title: ${{ inputs.app_name }} API
+            version: 1.0.0
+            description: "${{ inputs.change_description }}"
+          paths: {}
+          EOF
+          else
+            cat > "$FILE_PATH" << EOF
+          # App configuration
+          app:
+            name: ${{ inputs.app_name }}
+            description: "${{ inputs.change_description }}"
+            updated_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          EOF
+          fi
+
+          git add "$FILE_PATH"
+          git commit -m "Sync API specs: ${{ inputs.change_description }}"
+          git push -u origin "$BRANCH_NAME"
+
+      - name: Create Pull Request
+        run: |
+          gh pr create \
+            --title "Sync API specs for ${{ inputs.app_name }}" \
+            --body "Automated sync PR created by workflow.
+
+          **Changes:**
+          - File: \`specs/${{ inputs.app_name }}/latest/${{ inputs.change_file }}\`
+          - Description: ${{ inputs.change_description }}
+
+          This PR will be auto-merged by the validate-api-specs workflow." \
+            --base main \
+            --head "$BRANCH_NAME"

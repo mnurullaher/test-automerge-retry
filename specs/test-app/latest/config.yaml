@@ -1,0 +1,4 @@
+# App configuration
+app:
+  name: test-app
+  environment: development
