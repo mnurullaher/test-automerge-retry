@@ -1,7 +1,5 @@
 name: Create Sync PR
 
-# This workflow simulates an external system creating PRs automatically.
-# Trigger manually via GitHub Actions UI or via repository_dispatch event.
 on:
   workflow_dispatch:
     inputs:
@@ -29,7 +27,6 @@ jobs:
       contents: write
       pull-requests: write
     env:
-      # Use PAT instead of GITHUB_TOKEN so the PR triggers other workflows
       GH_TOKEN: ${{ secrets.PAT_TOKEN }}
     steps:
       - name: Checkout
@@ -42,32 +39,32 @@ jobs:
 
       - name: Create branch and make changes
         run: |
-          # Generate unique branch name with timestamp
           BRANCH_NAME="sync/${{ inputs.app_name }}-$(date +%Y%m%d-%H%M%S)"
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
           git checkout -b "$BRANCH_NAME"
 
-          # Make the change based on input
           FILE_PATH="specs/${{ inputs.app_name }}/latest/${{ inputs.change_file }}"
+          TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           
           if [ "${{ inputs.change_file }}" = "api.yaml" ]; then
-            cat > "$FILE_PATH" << EOF
-          openapi: 3.0.0
-          info:
-            title: ${{ inputs.app_name }} API
-            version: 1.0.0
-            description: "${{ inputs.change_description }}"
-          paths: {}
-          EOF
+            cat > "$FILE_PATH" <<EOF
+openapi: 3.0.0
+info:
+  title: ${{ inputs.app_name }} API
+  version: 1.0.0
+  description: "${{ inputs.change_description }}"
+  x-synced-at: "$TIMESTAMP"
+paths: {}
+EOF
           else
-            cat > "$FILE_PATH" << EOF
-          # App configuration
-          app:
-            name: ${{ inputs.app_name }}
-            description: "${{ inputs.change_description }}"
-            updated_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          EOF
+            cat > "$FILE_PATH" <<EOF
+# App configuration
+app:
+  name: ${{ inputs.app_name }}
+  description: "${{ inputs.change_description }}"
+  updated_at: "$TIMESTAMP"
+EOF
           fi
 
           git add "$FILE_PATH"
@@ -78,12 +75,6 @@ jobs:
         run: |
           gh pr create \
             --title "Sync API specs for ${{ inputs.app_name }}" \
-            --body "Automated sync PR created by workflow.
-
-          **Changes:**
-          - File: \`specs/${{ inputs.app_name }}/latest/${{ inputs.change_file }}\`
-          - Description: ${{ inputs.change_description }}
-
-          This PR will be auto-merged by the validate-api-specs workflow." \
+            --body "Automated sync PR. File: ${{ inputs.change_file }}, Description: ${{ inputs.change_description }}" \
             --base main \
             --head "$BRANCH_NAME"
