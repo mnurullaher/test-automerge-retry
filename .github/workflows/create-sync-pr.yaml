@@ -41,30 +41,25 @@ jobs:
         run: |
           BRANCH_NAME="sync/${{ inputs.app_name }}-$(date +%Y%m%d-%H%M%S)"
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-
           git checkout -b "$BRANCH_NAME"
 
           FILE_PATH="specs/${{ inputs.app_name }}/latest/${{ inputs.change_file }}"
           TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          
+
           if [ "${{ inputs.change_file }}" = "api.yaml" ]; then
-            cat > "$FILE_PATH" <<EOF
-openapi: 3.0.0
-info:
-  title: ${{ inputs.app_name }} API
-  version: 1.0.0
-  description: "${{ inputs.change_description }}"
-  x-synced-at: "$TIMESTAMP"
-paths: {}
-EOF
+            echo "openapi: 3.0.0" > "$FILE_PATH"
+            echo "info:" >> "$FILE_PATH"
+            echo "  title: ${{ inputs.app_name }} API" >> "$FILE_PATH"
+            echo "  version: 1.0.0" >> "$FILE_PATH"
+            echo "  description: ${{ inputs.change_description }}" >> "$FILE_PATH"
+            echo "  x-synced-at: $TIMESTAMP" >> "$FILE_PATH"
+            echo "paths: {}" >> "$FILE_PATH"
           else
-            cat > "$FILE_PATH" <<EOF
-# App configuration
-app:
-  name: ${{ inputs.app_name }}
-  description: "${{ inputs.change_description }}"
-  updated_at: "$TIMESTAMP"
-EOF
+            echo "# App configuration" > "$FILE_PATH"
+            echo "app:" >> "$FILE_PATH"
+            echo "  name: ${{ inputs.app_name }}" >> "$FILE_PATH"
+            echo "  description: ${{ inputs.change_description }}" >> "$FILE_PATH"
+            echo "  updated_at: $TIMESTAMP" >> "$FILE_PATH"
           fi
 
           git add "$FILE_PATH"
@@ -75,6 +70,6 @@ EOF
         run: |
           gh pr create \
             --title "Sync API specs for ${{ inputs.app_name }}" \
-            --body "Automated sync PR. File: ${{ inputs.change_file }}, Description: ${{ inputs.change_description }}" \
+            --body "Automated sync PR. File: ${{ inputs.change_file }}" \
             --base main \
             --head "$BRANCH_NAME"
