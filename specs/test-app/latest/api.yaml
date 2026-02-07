@@ -1,5 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Test App API
+  title: test-app API
   version: 1.0.0
+  description: "first change"
 paths: {}
