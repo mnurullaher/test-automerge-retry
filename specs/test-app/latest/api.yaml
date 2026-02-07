@@ -2,6 +2,6 @@ openapi: 3.0.0
 info:
   title: test-app API
   version: 1.0.0
-  description: Auto-synced change857685673
-  x-synced-at: 2026-02-07T17:10:58Z
+  description: Auto-synced change56745e7357
+  x-synced-at: 2026-02-07T17:24:45Z
 paths: {}
